@@ -54,7 +54,7 @@ jobs:
 
     - name: Run API tests only
       run: |
-        python -m pytest tests/api_tests/ -v --cov=./ --cov-report=xml --html=test_reports/report.html
+        python -m pytest tests/ -v --cov=./ --cov-report=xml --html=test_reports/report.html
 
     - name: Upload test reports
       uses: actions/upload-artifact@v4
