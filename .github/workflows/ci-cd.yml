@@ -1,3 +1,5 @@
+# .github/workflows/ci-cd.yml
+
 name: CI/CD
 
 on:
@@ -12,20 +14,17 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
+
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
-    
+        python-version: '3.10'
+
     - name: Cache pip packages
       uses: actions/cache@v3
       with:
@@ -33,13 +32,13 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-cov pytest-html flake8
-    
+
     - name: Lint with flake8
       run: |
         # Stop the build if there are Python syntax errors or undefined names
@@ -50,37 +49,30 @@ jobs:
     - name: Create logs directory
       run: mkdir -p logs
 
-    - name: Run tests excluding problematic ones
+    - name: Run tests
       run: |
-        python -m pytest tests/ -v -k "not test_run_conversational_agent and not test_run_suicide_prevention_agent" --cov=./ --cov-report=xml --html=test_reports/report.html
+        python -m pytest tests/ -v --cov=./ --cov-report=xml --html=test_reports/report.html
 
     - name: Upload test reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: test-reports
         path: |
           test_reports/
           logs/
-        compression-level: 9  # Maximum compression for logs and reports
-
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        fail_ci_if_error: true
+        retention-days: 5
 
   build:
     needs: test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    
+
     - name: Cache pip packages
       uses: actions/cache@v3
       with:
@@ -88,14 +80,16 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    
-    - name: Build project
+
+    - name: Install build tools
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
         pip install build wheel
+
+    - name: Build project
+      run: |
         python -m build
-      
+
     - name: Verify build artifacts
       run: |
         ls -la dist/
@@ -105,64 +99,64 @@ jobs:
         fi
 
     - name: Save build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: build-artifacts
         path: dist/
-        compression-level: 6  # Balance between speed and size for build artifacts
-        retention-days: 5     # Keep builds for 5 days
+        retention-days: 5
 
   deploy-api:
     needs: build
     runs-on: ubuntu-latest
-    environment: production
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Download build artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3
       with:
         name: build-artifacts
         path: dist/
-        merge-multiple: true  # In case of multiple artifacts
-    
+        # Using v3, merge-multiple is not needed as we're uploading a single artifact
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install dist/*.whl
         pip install uvicorn fastapi
-    
+
     - name: Create prompts directory
       run: |
         mkdir -p prompts
         touch prompts/prompts.yaml
-    
+
     - name: Start API server
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
       run: |
-        python -m uvicorn sukoon_api:app --host 127.0.0.1 --port 8001 &
-        sleep 10  # Give the server time to start
+        nohup uvicorn sukoon_api:app --host 127.0.0.1 --port 8001 &
 
     - name: Health check
-      timeout-minutes: 2
       run: |
+        echo "Waiting for API server to start..."
+        sleep 10  # Give the server time to start
         max_retries=5
         retry_count=0
         until curl -s http://127.0.0.1:8001/ || [ $retry_count -eq $max_retries ]
         do
-          echo "Waiting for API server to start... (Attempt $retry_count/$max_retries)"
+          echo "API server not responding yet... retrying ($((retry_count+1))/$max_retries)"
           sleep 5
-          retry_count=$((retry_count + 1))
+          retry_count=$((retry_count+1))
         done
-        
         if [ $retry_count -eq $max_retries ]; then
           echo "API server failed to start"
           exit 1
+        else
+          echo "API server is up and running!"
         fi
+        
