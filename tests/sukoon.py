@@ -22,7 +22,7 @@ class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
-def load_prompts(file_path='../prompts.yaml'):
+def load_prompts(file_path='prompts.yaml'):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
