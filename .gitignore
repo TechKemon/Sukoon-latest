@@ -21,3 +21,5 @@ whatsapp-bot
 prompts/prompts.txt
 user_research/sukoon_persona.jpg
 data/synthetic_convo_notebooklm.wav
+
+tests/regression_test.py
