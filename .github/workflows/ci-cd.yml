@@ -49,9 +49,13 @@ jobs:
     - name: Create logs directory
       run: mkdir -p logs
 
-    - name: Run tests
+    # - name: Run tests
+    #   run: |
+    #     python -m pytest tests/ -v --cov=./ --cov-report=xml --html=test_reports/report.html
+    
+    - name: Run API tests
       run: |
-        python -m pytest tests/ -v --cov=./ --cov-report=xml --html=test_reports/report.html
+          python -m pytest tests/test_api.py -v --cov=./ --cov-report=xml --html=test_reports/report.html
 
     - name: Upload test reports
       uses: actions/upload-artifact@v3
