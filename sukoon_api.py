@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from typing import TypedDict, Annotated
 import uvicorn
@@ -49,15 +49,24 @@ async def process_query(request: MYCARequest):
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
     
+@app.get("/query", response_model=MYCAResponse)
+async def process_query_get(input: str = Query(..., description="Please tell what brings you here?")):
+    try:
+        config = {"configurable": {"thread_id": "1", "user_id": "1"}}
+        response = chat(input, config)
+        return MYCAResponse(output=response.content)
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the MYCA API. Use the /query endpoint to interact with the system."}
+    return {"message": "Welcome to the MYCA API. Use the /docs or /query endpoint to interact with the system."}
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-# @app.posr("/docs")
+# @app.post("/docs")
 # async def redirect_root_to_docs():
 #     return RedirectResponse("/docs")
 
