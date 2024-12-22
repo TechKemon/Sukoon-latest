@@ -15,6 +15,7 @@ from langgraph.store.base import BaseStore
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 
+import logging
 import os
 import asyncio
 import yaml, uuid
@@ -62,20 +63,100 @@ class ConversationalAgent:
     # Now we can use a simpler async implementation
     async def run_conversational_agent(self, state: State):
         try:
-            # Format messages
+            # Get user ID from config or state
+            user_id = state.get("configurable", {}).get("user_id", "default")
+            namespace = (user_id, "memories")
+            
+            # Fetch and manage memories efficiently
+            memories = self._get_recent_memories(namespace)
+            memory_context = self._format_memory_context(memories)
+            
+            # Format messages once
             formatted_messages = self.conversational_prompt.format_messages(
-                memory_context="",  # Simplified for example
+                memory_context=memory_context,
                 input=state["messages"][-1].content
             )
-            
             # Stream response directly
-            response = await self.model.ainvoke(formatted_messages)
-            return {"messages": response}
+            # response = await self.model.ainvoke(formatted_messages)
+            # # Get response from model
+            # response = self.model.invoke(formatted_messages)
+            
+            # # Asynchronously store the new memory
+            # self._store_memory(namespace, str(response))
+            
+            # return {"messages": response}
+            
+            # Stream response from model
+            async for chunk in self.model.astream(formatted_messages):
+                print(chunk, sep='\t')
+                logging.debug(f"Received chunk: {chunk}")
+                yield {"messages": chunk}
+
+            # Store the conversation after streaming completes
+            self.store_conversation_in_sqlite(namespace, state["messages"])
             
         except Exception as e:
             print(f"Error in conversational agent: {str(e)}")
             return {"messages": AIMessage(content="I'm here to help. Could you please rephrase that?")}
+    
+    def _get_recent_memories(self, namespace) -> list:
+        """Efficiently retrieve recent memories with error handling"""
+        try:
+            memories = self.store.search(namespace)
+            return memories[-self.max_memories:] if memories else []
+        except Exception as e:
+            logging.warning(f"Error fetching memories: {str(e)}")
+            return []
 
+    def _format_memory_context(self, memories) -> str:
+        """Format memories into context string with validation"""
+        try:
+            if not memories:
+                return ""
+            return "\n".join(
+                m.value.get("user_message", "") 
+                for m in memories 
+                if isinstance(m.value, dict)
+            )
+        except Exception as e:
+            logging.warning(f"Error formatting memories: {str(e)}")
+            return ""
+
+    def _store_memory(self, namespace: tuple, memory: str) -> None:
+        """Store memory with automatic cleanup of old memories"""
+        try:
+            # Store new memory
+            memory_id = str(uuid.uuid4())
+            self.store.put(namespace, memory_id, {
+                "user_message": memory,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            # Cleanup old memories if needed
+            self._cleanup_old_memories(namespace)
+        except Exception as e:
+            logging.error(f"Error storing memory: {str(e)}")
+
+    def _cleanup_old_memories(self, namespace: tuple) -> None:
+        """Remove oldest memories when limit is exceeded"""
+        try:
+            memories = self.store.search(namespace)
+            if len(memories) > self.max_memories:
+                # Sort by timestamp and remove oldest
+                sorted_memories = sorted(
+                    memories,
+                    key=lambda x: x.value.get("timestamp", ""),
+                    reverse=True
+                )
+                for memory in sorted_memories[self.max_memories:]:
+                    self.store.delete(namespace, memory.id)
+        except Exception as e:
+            logging.warning(f"Error cleaning up memories: {str(e)}")
+
+    def _get_fallback_response(self) -> AIMessage:
+        """Return graceful fallback response if something goes wrong"""
+        return AIMessage(content="I'm here to help. Could you please rephrase that?")
+    
 # Initialize agent
 # conversational_agent = ConversationalAgent(model, store, max_memories=10)
 

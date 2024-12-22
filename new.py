@@ -45,7 +45,7 @@ def load_prompts(file_path='prompts.yaml'):
         return yaml.safe_load(file)
 prompts = load_prompts()
 
-model = ChatOpenAI(api_key = openai_api_key, model="gpt-4o-mini", streaming=True)
+model = ChatOpenAI(api_key = openai_api_key, model="gpt-4o-mini") # , streaming=True
 # model = ChatAnthropic(api_key = anthropic_api_key)
 
 # in_memory_store = InMemoryStore()
@@ -353,56 +353,3 @@ if __name__ == "__main__":
     
     # Run the async main function
     # asyncio.run(main())
-        
-    # NOTE: SUMMARIZE PAST CONVOS USING SQLITE3 & AI
-    # def run_conversational_agent(state: State):
-    #     # Fetch past conversations from SQLite
-    #     namespace = ("memories_user_id", "1")
-    #     past_conversations = fetch_conversations_from_sqlite(namespace)
-
-    #     # Summarize past conversations to keep input concise
-    #     summary = summarize_conversations(past_conversations, model)
-
-    #     # Include the summary in the system message
-    #     system_msg = f"{conversational_prompt}\n\nSummary of previous conversations: {summary}"
-
-    #     # Format messages for the model
-    #     messages = [SystemMessage(content=system_msg)] + state["messages"]
-
-    #     # Invoke the model
-    #     response = model.invoke(messages)
-
-    #     # Optionally, store the current conversation to SQLite
-    #     store_conversation_in_sqlite(namespace, state["messages"] + [response])
-
-    #     return {"messages": state["messages"] + [response]}
-
-    # def fetch_conversations_from_sqlite(namespace):
-    #     # Implement the logic to fetch past conversations from SQLite
-    #     # For example, retrieve the last N messages for the user
-    #     conn = sqlite3.connect('db/conversations.db')
-    #     cursor = conn.cursor()
-    #     LIMIT = 10
-    #     cursor.execute("SELECT message FROM conversations WHERE namespace=? ORDER BY timestamp DESC LIMIT ?", (namespace,LIMIT))
-    #     rows = cursor.fetchall()
-    #     conn.close()
-    #     return [row[0] for row in rows]
-
-    # def summarize_conversations(conversations, model):
-    #     # Use the model to summarize past conversations
-    #     summary_prompt = ChatPromptTemplate.from_messages([
-    #         ("system", "Summarize the following conversations concisely for context:"),
-    #         ("human", "\n".join(conversations)),
-    #     ])
-    #     summary = model.invoke(summary_prompt.format_messages())
-    #     return summary.content.strip()
-
-    # def store_conversation_in_sqlite(namespace, messages):
-    #     # Implement logic to store the conversation in SQLite
-    #     conn = sqlite3.connect('db/conversations.db')
-    #     cursor = conn.cursor()
-    #     for message in messages:
-    #         cursor.execute("INSERT INTO conversations (namespace, message, timestamp) VALUES (?, ?, ?)",
-    #                        (namespace, message.content, datetime.now()))
-    #     conn.commit()
-    #     conn.close()
