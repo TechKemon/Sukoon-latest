@@ -4,7 +4,7 @@ services:
   sukoon-backend:
     build: .
     ports:
-      - "8002:8001" # 8001 is our internal port
+      - "8002:8000" # 8000 is our internal port
     volumes:
       - .:/app
       - ./data:/app/data  # For any data files
