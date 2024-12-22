@@ -34,7 +34,7 @@ if not openai_api_key:
     # Load just the .env file and try again
     load_dotenv(find_dotenv(), override=True)
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    # anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
     LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
     # PORTKEY_API_KEY = os.getenv("PORTKEY_API_KEY")
     # PORTKEY_VIRTUAL_KEY = os.getenv("PORTKEY_VIRTUAL_KEY")
@@ -45,8 +45,8 @@ def load_prompts(file_path='prompts.yaml'):
         return yaml.safe_load(file)
 prompts = load_prompts()
 
-model = ChatOpenAI(api_key = openai_api_key, model="gpt-4o-mini") # , streaming=True
-# model = ChatAnthropic(api_key = anthropic_api_key)
+# model = ChatOpenAI(api_key = openai_api_key, model="gpt-4o-mini", temperature=0.7) # , streaming=True
+model = ChatAnthropic(model="claude-3-5-sonnet-20241022", api_key=anthropic_api_key, max_tokens=300, max_retries=2, temperature=0.7)
 
 # in_memory_store = InMemoryStore()
 store = InMemoryStore()
