@@ -57,38 +57,45 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.post("/feedback", response_model=MYCAResponse)
-async def submit_feedback(request: FeedbackRequest):
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://supabase.pplus.ai/rest/v1/Feedback",
-                headers={
-                    'Content-Type': 'application/json',
-                    'apikey': os.getenv('SUPABASE_API_KEY'),
-                    'Authorization': f"Bearer {os.getenv('SUPABASE_AUTHORIZATION_TOKEN')}",
-                    'Prefer': 'return=minimal'
-                },
-                json={
-                    'action': request.feedback,
-                    'feedback': request.message,
-                    'message_id': request.message_id
-                },
-                timeout=10.0
-            )
+# @app.posr("/docs")
+# async def redirect_root_to_docs():
+#     return RedirectResponse("/docs")
+
+if __name__ == "__main__":
+    uvicorn.run(app, host = "0.0.0.0", port=8000)
+
+# @app.post("/feedback", response_model=MYCAResponse)
+# async def submit_feedback(request: FeedbackRequest):
+#     try:
+#         async with httpx.AsyncClient() as client:
+#             response = await client.post(
+#                 "https://supabase.pplus.ai/rest/v1/Feedback",
+#                 headers={
+#                     'Content-Type': 'application/json',
+#                     'apikey': os.getenv('SUPABASE_API_KEY'),
+#                     'Authorization': f"Bearer {os.getenv('SUPABASE_AUTHORIZATION_TOKEN')}",
+#                     'Prefer': 'return=minimal'
+#                 },
+#                 json={
+#                     'action': request.feedback,
+#                     'feedback': request.message,
+#                     'message_id': request.message_id
+#                 },
+#                 timeout=10.0
+#             )
             
-            if response.status_code != 201:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail="Failed to submit feedback to Supabase"
-                )
+#             if response.status_code != 201:
+#                 raise HTTPException(
+#                     status_code=response.status_code,
+#                     detail="Failed to submit feedback to Supabase"
+#                 )
                 
-            return MYCAResponse(output="Feedback submitted successfully")
+#             return MYCAResponse(output="Feedback submitted successfully")
             
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Request to Supabase timed out")
-    except Exception as error:
-        raise HTTPException(status_code=500, detail=str(error))
+#     except httpx.TimeoutException:
+#         raise HTTPException(status_code=504, detail="Request to Supabase timed out")
+#     except Exception as error:
+#         raise HTTPException(status_code=500, detail=str(error))
         
     
     # try {
@@ -132,15 +139,6 @@ async def submit_feedback(request: FeedbackRequest):
     # }
     
 
-# @app.posr("/docs")
-# async def redirect_root_to_docs():
-#     return RedirectResponse("/docs")
-
-if __name__ == "__main__":
-    uvicorn.run(app, host = "0.0.0.0", port=8000)
-
-# Procfile
-# web: uvicorn main:app --host 0.0.0.0 --port $PORT
 
 # for google analytics
 # templates = Jinja2Templates(directory="templates")
