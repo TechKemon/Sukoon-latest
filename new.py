@@ -45,8 +45,8 @@ def load_prompts(file_path='prompts.yaml'):
         return yaml.safe_load(file)
 prompts = load_prompts()
 
-# model = ChatOpenAI(api_key = openai_api_key, model="gpt-4o-mini", temperature=0.7) # , streaming=True
-model = ChatAnthropic(model="claude-3-5-sonnet-20241022", api_key=anthropic_api_key, max_tokens=300, max_retries=2, temperature=0.7)
+model = ChatOpenAI(api_key = openai_api_key, model="gpt-4o-mini", temperature=0.7) # , streaming=True
+# model = ChatAnthropic(model="claude-3-5-haiku-20241022", api_key=anthropic_api_key, max_tokens=300, max_retries=2, temperature=0.7)
 
 # in_memory_store = InMemoryStore()
 store = InMemoryStore()
