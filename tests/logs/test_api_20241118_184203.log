@@ -1,0 +1,73 @@
+2024-11-18 18:42:04,807 - INFO - HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2024-11-18 18:42:04,808 - INFO - {
+  "test_name": "test_root_endpoint",
+  "timestamp": "2024-11-18T18:42:04.808612",
+  "response": {
+    "message": "Welcome to the Sukoon API. Use the /query endpoint to interact with the system."
+  }
+}
+2024-11-18 18:42:07,634 - INFO - HTTP Request: POST https://api.portkey.ai/v1/chat/completions "HTTP/1.1 200 OK"
+2024-11-18 18:42:07,664 - INFO - HTTP Request: POST http://testserver/query "HTTP/1.1 200 OK"
+2024-11-18 18:42:07,665 - INFO - {
+  "test_name": "test_query_endpoint_success",
+  "timestamp": "2024-11-18T18:42:07.665382",
+  "request": {
+    "input": "Hello, how are you?"
+  },
+  "response": {
+    "output": "Please use this wisely. This space is for mental and emotional well-being. Namaste."
+  }
+}
+2024-11-18 18:42:08,868 - INFO - HTTP Request: POST https://api.portkey.ai/v1/chat/completions "HTTP/1.1 200 OK"
+2024-11-18 18:42:08,875 - INFO - HTTP Request: POST http://testserver/query "HTTP/1.1 200 OK"
+2024-11-18 18:42:08,876 - INFO - {
+  "test_name": "test_query_endpoint_empty_input",
+  "timestamp": "2024-11-18T18:42:08.876488",
+  "request": {
+    "input": ""
+  },
+  "response": {
+    "output": "Please use this wisely. This space is for mental and emotional well-being. Namaste."
+  }
+}
+2024-11-18 18:42:08,886 - INFO - HTTP Request: POST http://testserver/query "HTTP/1.1 422 Unprocessable Entity"
+2024-11-18 18:42:08,886 - INFO - {
+  "test_name": "test_query_endpoint_invalid_request",
+  "timestamp": "2024-11-18T18:42:08.886497",
+  "request": {
+    "wrong_field": "Hello"
+  },
+  "response": {
+    "detail": [
+      {
+        "type": "missing",
+        "loc": [
+          "body",
+          "input"
+        ],
+        "msg": "Field required",
+        "input": {
+          "wrong_field": "Hello"
+        }
+      }
+    ]
+  }
+}
+2024-11-18 18:42:08,893 - INFO - HTTP Request: POST http://testserver/query "HTTP/1.1 422 Unprocessable Entity"
+2024-11-18 18:42:08,894 - INFO - {
+  "test_name": "test_query_endpoint_missing_input",
+  "timestamp": "2024-11-18T18:42:08.894215",
+  "response": {
+    "detail": [
+      {
+        "type": "missing",
+        "loc": [
+          "body",
+          "input"
+        ],
+        "msg": "Field required",
+        "input": {}
+      }
+    ]
+  }
+}
