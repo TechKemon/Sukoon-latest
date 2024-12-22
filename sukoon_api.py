@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import TypedDict, Annotated
 import uvicorn
+import httpx
+from typing import Literal
+import os
 
 # from fastapi import Request
 # from fastapi.responses import HTMLResponse
@@ -10,6 +13,7 @@ import uvicorn
 # from datetime import datetime
 
 from sukoon import chat
+# from new import chat
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -30,6 +34,11 @@ class SukoonRequest(BaseModel):
 class SukoonResponse(BaseModel):
     output: str
 
+class FeedbackRequest(BaseModel):
+    feedback: Literal["like", "dislike"]
+    message: str
+    message_id: str
+
 @app.post("/query", response_model = SukoonResponse)
 async def process_query(request: SukoonRequest):
     config = {"configurable": {"thread_id":"1"}}
@@ -44,6 +53,79 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.post("/feedback", response_model= SukoonResponse)
+async def get_feedback(request: FeedbackRequest):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://supabase.pplus.ai/rest/v1/Feedback",
+                headers={
+                    'Content-Type': 'application/json',
+                    'apikey': os.getenv('SUPABASE_API_KEY'),
+                    'Authorization': os.getenv('SUPABASE_AUTHORIZATION_TOKEN'),
+                    'Prefer': 'return=minimal'
+                },
+                json={
+                    'action': request.feedback,
+                    'feedback': request.message,
+                    'message_id': request.message_id
+                }
+            )
+            
+            if response.status_code != 201:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail="Failed to submit feedback to Supabase"
+                )
+                
+            return SukoonResponse(output="Feedback submitted successfully")
+            
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+        
+    
+    # try {
+    #     const response = await fetch("https://supabase.pplus.ai/rest/v1/Feedback", {
+    #     method: 'POST',
+    #     headers: {
+    #         'Content-Type': 'application/json',
+    #         'apikey': SUPABASE_API_KEY,
+    #         'Authorization': SUPABASE_AUTHORIZATION_TOKEN,
+    #         'Prefer': 'return=minimal'
+    #     },
+    #     body: JSON.stringify({
+    #         'action': feedback.feedback,
+    #         'feedback': feedbackMessage,
+    #     }),
+    #     });
+
+    #     if (response.status !== 201) {
+    #     throw new Error(`HTTP error! Status: ${response.status}`);
+    #     }
+
+    #     setFeedback("");
+    #     setFeedbackMessage("");
+
+    #     if (feedback.feedback === "like") {
+    #     // remove the message from the list of dislikedMessages, if it was added earlier (only for local state)
+    #     if (dislikedMessages.includes(feedback.messageId) === true) {
+    #         setDislikedMessages(dislikedMessages => dislikedMessages.filter(item => item !== feedback.messageId));
+    #     }
+    #     setLikedMessages(likedMessages => [...likedMessages, feedback.messageId]);
+    #     } else {
+    #     // remove the message from the list of setLikedMessages, if it was added earlier (only for local state)
+    #     if (likedMessages.includes(feedback.messageId) === true) {
+    #         setLikedMessages(likedMessages => likedMessages.filter(item => item !== feedback.messageId));
+    #     }
+    #     setDislikedMessages(dislikedMessages => [...dislikedMessages, feedback.messageId]);
+    #     }
+    # } catch (error) {
+    #     console.error('Error:', error);
+    # }
+    # }
+    
+
 
 # async def redirect_root_to_docs():
 #     return RedirectResponse("/docs")

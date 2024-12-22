@@ -46,7 +46,6 @@ prompts = load_prompts()
 # Initialize Redis client
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
-
 # PORTKEY IMPLEMENTATION
 portkey_handler = LangchainCallbackHandler(
     api_key=PORTKEY_API_KEY,
@@ -97,62 +96,62 @@ class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
 # Create the base Agent class
-# Base Agent class using Redis
-class Agent:
-    def __init__(self, prompt_template, model, redis_client, namespace):
-        self.prompt_template = prompt_template
-        self.model = model
-        self.redis_client = redis_client
-        self.namespace = namespace
-        # Clear the Redis list when a new object is created
-        self.redis_client.delete(self.namespace)
-
-    def run(self, state: State):
-        print(f"Running {self.__class__.__name__}")
-        # Retrieve the last 2 conversations from Redis
-        memories = self.redis_client.lrange(self.namespace, -2, -1)
-        memories = [memory.decode('utf-8') for memory in memories]
-        info = "\n".join(memories)
-        # Incorporate memories into the system message
-        system_msg = self.prompt_template.format(input="{input}") + f"\nTake into account these past conversations: {info}"
-        response = self.model.invoke(
-            [{"type": "system", "content": system_msg}] + state["messages"]
-        )
-        # Store the new conversation in Redis
-        memory = str(response)
-        self.redis_client.rpush(self.namespace, memory)
-        # Trim the list to keep only the last 2 conversations
-        self.redis_client.ltrim(self.namespace, -2, -1)
-        return {"messages": response}
-
+# # Base Agent class using Redis
 # class Agent:
-#     def __init__(self, prompt_template, model, store: BaseStore):
+#     def __init__(self, prompt_template, model, redis_client, namespace):
 #         self.prompt_template = prompt_template
 #         self.model = model
-#         self.store = store
-#         self.namespace = ("memories", "123")  # Using the same namespace across agents
-#         # Clear memory when a new object is created
-#         # for key in list(self.store.store.keys()):
-#         #     if key[0] == self.namespace[0] and key[1] == self.namespace[1]:
-#         #         del self.store.store[key]
-    
+#         self.redis_client = redis_client
+#         self.namespace = namespace
+#         # Clear the Redis list when a new object is created
+#         self.redis_client.delete(self.namespace)
+
 #     def run(self, state: State):
 #         print(f"Running {self.__class__.__name__}")
-#         # Retrieve the last 6 memories if available
-#         memories = self.store.search(self.namespace)
-#         last_memories = memories[-6:] if len(memories) > 6 else memories
-#         info = "\n".join([d.value["data"] for d in last_memories])
+#         # Retrieve the last 2 conversations from Redis
+#         memories = self.redis_client.lrange(self.namespace, -2, -1)
+#         memories = [memory.decode('utf-8') for memory in memories]
+#         info = "\n".join(memories)
 #         # Incorporate memories into the system message
 #         system_msg = self.prompt_template.format(input="{input}") + f"\nTake into account these past conversations: {info}"
 #         response = self.model.invoke(
 #             [{"type": "system", "content": system_msg}] + state["messages"]
 #         )
-#         # Store new memories unconditionally or based on specific criteria
-#         # last_message = state["messages"][-1]
-#         # if "remember" in last_message.content.lower():
+#         # Store the new conversation in Redis
 #         memory = str(response)
-#         self.store.put(self.namespace, str(uuid.uuid4()), {"data": memory})
+#         self.redis_client.rpush(self.namespace, memory)
+#         # Trim the list to keep only the last 2 conversations
+#         self.redis_client.ltrim(self.namespace, -2, -1)
 #         return {"messages": response}
+
+class Agent:
+    def __init__(self, prompt_template, model, store: BaseStore):
+        self.prompt_template = prompt_template
+        self.model = model
+        self.store = store
+        self.namespace = ("memories", "123")  # Using the same namespace across agents
+        # Clear memory when a new object is created
+        # for key in list(self.store.store.keys()):
+        #     if key[0] == self.namespace[0] and key[1] == self.namespace[1]:
+        #         del self.store.store[key]
+    
+    def run(self, state: State):
+        print(f"Running {self.__class__.__name__}")
+        # Retrieve the last 6 memories if available
+        memories = self.store.search(self.namespace)
+        last_memories = memories[-6:] if len(memories) > 6 else memories
+        info = "\n".join([d.value["data"] for d in last_memories])
+        # Incorporate memories into the system message
+        system_msg = self.prompt_template.format(input="{input}") + f"\nTake into account these past conversations: {info}"
+        response = self.model.invoke(
+            [{"type": "system", "content": system_msg}] + state["messages"]
+        )
+        # Store new memories unconditionally or based on specific criteria
+        # last_message = state["messages"][-1]
+        # if "remember" in last_message.content.lower():
+        memory = str(response)
+        self.store.put(self.namespace, str(uuid.uuid4()), {"data": memory})
+        return {"messages": response}
 
 # DEFINING THE PROMPT
 
