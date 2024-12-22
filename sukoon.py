@@ -78,20 +78,20 @@ def run_conversational_agent(state: State, store: BaseStore):
     print("Running conversational agent")
     namespace = ("memories", "123")
     memories = store.search(namespace)
-    info = "\n".join([d.value["data"] for d in memories])
-    system_msg = f"{conversational_prompt} \n Take into account these past conversations: {info}"
-    response = model.invoke(
-        [{"type": "system", "content": system_msg}] + state["messages"]
-    )
-    # new_conversational_prompt = f"{conversational_prompt} \n Take into account these past conversation into account: {info}"
-    # convo_model = new_conversational_prompt | model
-    # response = convo_model.invoke(state["messages"])
+    info = "\n".join([d.value["User_Message"] for d in memories])
+    # system_msg = f"{conversational_prompt} \n Take into account these past conversations: {info}"
+    # response = model.invoke(
+    #     [{"type": "system", "content": system_msg}] + state["messages"]
+    # )
+    new_conversational_prompt = f"{conversational_prompt} \n Take into account these past conversation into account: {info}"
+    convo_model = new_conversational_prompt | model
+    response = convo_model.invoke(state["messages"])
     
     # Store new memories if the user asks the model to remember
-    last_message = state["messages"][-1]
-    if "remember" in last_message.content.lower():
-        memory = str(response)
-        store.put(namespace, str(uuid.uuid4()), {"data": memory})
+    # last_message = state["messages"][-1]
+    # if last_message:
+    memory = str(response)
+    store.put(namespace, str(uuid.uuid4()), {"User_Message": memory})
     return {"messages": response}
 
 def run_suicide_prevention_agent(state: State, store: BaseStore):
@@ -99,8 +99,8 @@ def run_suicide_prevention_agent(state: State, store: BaseStore):
     namespace = ("memories", "234")
     memories = store.search(namespace)
     info = "\n".join([d.value["data"] for d in memories])
-    new_suicide_prevention_prompt = f"{suicide_prevention_prompt} \n Take into account these past conversation into account: {info}"
-    concern_model = suicide_prevention_prompt | model
+    suicide_prevention_agent = f"{suicide_prevention_prompt} \n Take into account these past conversation into account: {info}"
+    concern_model = suicide_prevention_agent | model
     response = concern_model.invoke(state["messages"])
     
     # Store new memories if the user asks the model to remember

@@ -4,9 +4,9 @@ name: CI/CD
 
 on:
   push:
-    branches: [ langgraph ]
+    branches: [ main ]
   pull_request:
-    branches: [ langgraph ]
+    branches: [ main ]
 
 permissions:
   contents: read
