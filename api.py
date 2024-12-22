@@ -12,12 +12,12 @@ import os
 # import json
 # from datetime import datetime
 
-from sukoon import chat
-# from new import chat
+# from sukoon import chat
+from new import chat
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Sukoon", description="API for the Sukoon mental health support system")
+app = FastAPI(title="MYCA", description="API for the MYCA mental health support system")
 
 # Add CORS middleware
 app.add_middleware(
@@ -28,10 +28,10 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-class SukoonRequest(BaseModel):
+class MYCARequest(BaseModel):
     input: str
 
-class SukoonResponse(BaseModel):
+class MYCAResponse(BaseModel):
     output: str
 
 class FeedbackRequest(BaseModel):
@@ -39,23 +39,26 @@ class FeedbackRequest(BaseModel):
     message: str
     message_id: str
 
-@app.post("/query", response_model = SukoonResponse)
-async def process_query(request: SukoonRequest):
-    config = {"configurable": {"thread_id":"1"}}
-    user_input = request.input
-    response = chat(user_input, config)
-    return SukoonResponse(output = response.content)
+@app.post("/query", response_model=MYCAResponse)
+async def process_query(request: MYCARequest):
+    try:
+        config = {"configurable": {"thread_id": "1", "user_id": "1"}}
+        user_input = request.input
+        response = chat(user_input, config)
+        return MYCAResponse(output=response.content)
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
     
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Sukoon API. Use the /query endpoint to interact with the system."}
+    return {"message": "Welcome to the MYCA API. Use the /query endpoint to interact with the system."}
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-@app.post("/feedback", response_model= SukoonResponse)
-async def get_feedback(request: FeedbackRequest):
+@app.post("/feedback", response_model=MYCAResponse)
+async def submit_feedback(request: FeedbackRequest):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -63,14 +66,15 @@ async def get_feedback(request: FeedbackRequest):
                 headers={
                     'Content-Type': 'application/json',
                     'apikey': os.getenv('SUPABASE_API_KEY'),
-                    'Authorization': os.getenv('SUPABASE_AUTHORIZATION_TOKEN'),
+                    'Authorization': f"Bearer {os.getenv('SUPABASE_AUTHORIZATION_TOKEN')}",
                     'Prefer': 'return=minimal'
                 },
                 json={
                     'action': request.feedback,
                     'feedback': request.message,
                     'message_id': request.message_id
-                }
+                },
+                timeout=10.0
             )
             
             if response.status_code != 201:
@@ -79,8 +83,10 @@ async def get_feedback(request: FeedbackRequest):
                     detail="Failed to submit feedback to Supabase"
                 )
                 
-            return SukoonResponse(output="Feedback submitted successfully")
+            return MYCAResponse(output="Feedback submitted successfully")
             
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Request to Supabase timed out")
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
         
@@ -126,12 +132,15 @@ async def get_feedback(request: FeedbackRequest):
     # }
     
 
-
+# @app.posr("/docs")
 # async def redirect_root_to_docs():
 #     return RedirectResponse("/docs")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host = "0.0.0.0", port = 8001)
+    uvicorn.run(app, host = "0.0.0.0", port=8000)
+
+# Procfile
+# web: uvicorn main:app --host 0.0.0.0 --port $PORT
 
 # for google analytics
 # templates = Jinja2Templates(directory="templates")
