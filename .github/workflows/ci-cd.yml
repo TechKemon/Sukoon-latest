@@ -13,9 +13,9 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY}}
-      PORTKEY_API_KEY: ${{ secrets.PORTKEY_API_KEY }}
-      PORTKEY_VIRTUAL_KEY: ${{ secrets.PORTKEY_VIRTUAL_KEY }}
-      PORTKEY_VIRTUAL_KEY_A: ${{ secrets.PORTKEY_VIRTUAL_KEY_A }}
+      # PORTKEY_API_KEY: ${{ secrets.PORTKEY_API_KEY }}
+      # PORTKEY_VIRTUAL_KEY: ${{ secrets.PORTKEY_VIRTUAL_KEY }}
+      # PORTKEY_VIRTUAL_KEY_A: ${{ secrets.PORTKEY_VIRTUAL_KEY_A }}
 
     steps:
       - name: Checkout
