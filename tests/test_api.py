@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 import json
 
-from sukoon_api import app
+from myca_api import app
 # from api import app
 
 # Set up logging

@@ -12,14 +12,14 @@ services:
     environment:
       - PYTHONPATH=/app
       - HOST=0.0.0.0
-      - PORT=8001
+      - PORT=8000
       # Add your other environment variables here
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - PORTKEY_API_KEY=${PORTKEY_API_KEY}
-      - PORTKEY_VIRTUAL_KEY=${PORTKEY_VIRTUAL_KEY}
-      - PORTKEY_VIRTUAL_KEY_A=${PORTKEY_VIRTUAL_KEY_A}
+      # - PORTKEY_API_KEY=${PORTKEY_API_KEY}
+      # - PORTKEY_VIRTUAL_KEY=${PORTKEY_VIRTUAL_KEY}
+      # - PORTKEY_VIRTUAL_KEY_A=${PORTKEY_VIRTUAL_KEY_A}
     restart: unless-stopped
   sukoon-frontend:
     build: ./frontend-vite # ./sukoon-frontend for earlier version
@@ -30,7 +30,7 @@ services:
     #     SUPABASE_AUTHORIZATION_TOKEN: ${SUPABASE_AUTHORIZATION_TOKEN}
     #     BACKEND_ENDPOINT: ${BACKEND_ENDPOINT}
     ports:
-      - "3002:80" # "3002:3000" for earlier version
+      - "3001:80" # "3001:3000" for earlier version
     restart: unless-stopped
 
 # version: '3.8'
