@@ -1,7 +1,7 @@
 # Project Sukoon: Mental Health Support using AI
 <img src="archive/sukoon_logo.png" alt="Sukoon Pic" width="200" style="display: block; margin: 0 auto;">
 
-# ATTENTION: THE REPO HAS NOW MOVED TO `https://github.com/TechKemon/Sukoon-latest`. PLEASE PUSH TO THIS REPO FOR CONTRIBUTING. THANKS FOR YOUR COOPERATION.
+## THIS IS THE UPDATED GITHUB REPO FOR SUKOON PROJECT.
 
 ## Open Roles for Tech Tasks 
 
