@@ -123,4 +123,4 @@ Mental health support in India faces several challenges:
 * Can we create a timeline tracker let’s say six month plan for meditation and track streak
 * Can we give them a phone number they can call to? The bot will mainly listen , empathize and offer safe advice
 
-“Made for 🇮🇳 with ❤️ by People+AI”
+“Made for 🇮🇳 with incubation at People+AI”
