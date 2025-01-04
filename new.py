@@ -190,8 +190,82 @@ class ConversationalAgent:
         except Exception as e:
             logging.error(f"Error in conversational agent: {str(e)}")
             return {"messages": [AIMessage(content="I'm here to help. Could you please rephrase that?")]}
+
+# Instantiate the conversational agent with tools
+conversational_agent = ConversationalAgent(model, store, max_memories=10) # conversational_prompt, llm_with_tools
+# agent = ConversationalAgent(prompt_template=conversational_prompt,model=model,store=store,max_memories=10)
+
+# # Define the router function
+# def route_query(state: State):
+#     # Since we have only one agent now, we can directly route to the conversational agent
+#     return "conversational"
+
+# Create the graph
+workflow = StateGraph(State)
+workflow.add_node("conversational", conversational_agent.run_conversational_agent)
+# workflow.add_conditional_edges(
+#     START,
+#     route_query,
+#     {"conversational": "conversational"}
+# )
+workflow.add_edge(START,"conversational")
+workflow.add_edge("conversational", END)
+
+# Compile the graph
+memory = MemorySaver()
+graph = workflow.compile(checkpointer=memory, store=store)
+
+# Function to run a conversation turn
+def chat(message: str, config: dict):
+    result = graph.invoke({"messages": [HumanMessage(content=message)]}, config=config)
+    # for update in graph.stream(
+    #         {"messages": [HumanMessage(content=message)]}, config=config, stream_mode="messages" # updates, values, debug
+    #     ):
+    #     # print(update, "\n", type(update))
+    #     # print()
+    #     if "messages" in update and update["messages"]:
+    #         # Yield each chunk of the response
+    #         ai_message = update['conversational']['messages']
+    #         # if isinstance(ai_message, AIMessageChunk):
+    #         print(ai_message.content, end="", flush=True)
+                # yield ai_message
+    return result["messages"][-1]
+
+if __name__ == "__main__":
+    # async def main():
+    user_id = "1"
+    config = {"configurable": {"thread_id": "1", "user_id": user_id}}
     
-    # def run_conversational_agent(self, state: State):
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() in ["exit", "quit"]:
+            print("MYCA: Goodbye!")
+            break
+        
+        repsonse = chat(user_input, config)
+        print("MYCA:") # end="\n"
+        print(repsonse.content)  # New line after complete response
+        
+        # print("MYCA:", end=" ", flush=True)
+            # async for chunk in chat(user_input, config):
+            #     # Handle different types of chunks
+            #     if isinstance(chunk, str):
+            #         print(chunk, end="", flush=True)
+            #     elif isinstance(chunk, dict) and "content" in chunk:
+            #         print(chunk["content"], end="", flush=True)
+            #     elif hasattr(chunk, "content"):
+            #         print(chunk.content, end="", flush=True)
+            #     else:
+            #         print(f"Debug: Received chunk type: {type(chunk)}")  # Debug line
+    
+    # async for event in app.astream_events({"messages": inputs}, version="v1"):
+    # kind = event["event"]
+    # print(f"{kind}: {event['name']}")
+   
+    # Run the async main function
+    # asyncio.run(main())
+
+# def run_conversational_agent(self, state: State):
     #     try:
     #         # Get user ID from config or state
     #         user_id = state.get("configurable", {}).get("user_id", "default")
@@ -277,79 +351,3 @@ class ConversationalAgent:
     # def _get_fallback_response(self) -> AIMessage:
     #     """Return graceful fallback response if something goes wrong"""
     #     return AIMessage(content="I'm here to help. Could you please rephrase that?")
-
-# Instantiate the conversational agent with tools
-conversational_agent = ConversationalAgent(model, store, max_memories=10) # conversational_prompt, llm_with_tools
-# agent = ConversationalAgent(prompt_template=conversational_prompt,model=model,store=store,max_memories=10)
-
-# # Define the router function
-# def route_query(state: State):
-#     # Since we have only one agent now, we can directly route to the conversational agent
-#     return "conversational"
-
-# Create the graph
-workflow = StateGraph(State)
-workflow.add_node("conversational", conversational_agent.run_conversational_agent)
-# workflow.add_conditional_edges(
-#     START,
-#     route_query,
-#     {"conversational": "conversational"}
-# )
-workflow.add_edge(START,"conversational")
-workflow.add_edge("conversational", END)
-
-# Compile the graph
-memory = MemorySaver()
-graph = workflow.compile(checkpointer=memory, store=store)
-
-# Function to run a conversation turn
-def chat(message: str, config: dict):
-    result = graph.invoke({"messages": [HumanMessage(content=message)]}, config=config)
-    # for update in graph.stream(
-    #         {"messages": [HumanMessage(content=message)]}, config=config, stream_mode="messages" # updates, values, debug
-    #     ):
-    #     # print(update, "\n", type(update))
-    #     # print()
-    #     if "messages" in update and update["messages"]:
-    #         # Yield each chunk of the response
-    #         ai_message = update['conversational']['messages']
-    #         # if isinstance(ai_message, AIMessageChunk):
-    #         print(ai_message.content, end="", flush=True)
-                # yield ai_message
-    return result["messages"][-1]
-
-if __name__ == "__main__":
-    # async def main():
-    user_id = "1"
-    config = {"configurable": {"thread_id": "1", "user_id": user_id}}
-    
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() in ["exit", "quit"]:
-            print("MYCA: Goodbye!")
-            break
-        
-        repsonse = chat(user_input, config)
-        print("MYCA:") # end="\n"
-        print(repsonse.content)  # New line after complete response
-        
-        # print("MYCA:", end=" ", flush=True)
-            # async for chunk in chat(user_input, config):
-            #     # Handle different types of chunks
-            #     if isinstance(chunk, str):
-            #         print(chunk, end="", flush=True)
-            #     elif isinstance(chunk, dict) and "content" in chunk:
-            #         print(chunk["content"], end="", flush=True)
-            #     elif hasattr(chunk, "content"):
-            #         print(chunk.content, end="", flush=True)
-            #     else:
-            #         print(f"Debug: Received chunk type: {type(chunk)}")  # Debug line
-    
-    # async for event in app.astream_events({"messages": inputs}, version="v1"):
-    # kind = event["event"]
-    # print(f"{kind}: {event['name']}")
-   
-    
-    
-    # Run the async main function
-    # asyncio.run(main())
