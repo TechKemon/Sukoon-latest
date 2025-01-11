@@ -89,6 +89,7 @@ async def process_query(request: MYCARequest, supabase: SupabaseManager = Depend
         
         # Process chat. If chat() is blocking, consider running it in a threadpool using run_in_executor.
         history = supabase.get_chat_history(mobile=mobile)
+        logger.info("Retrieved chat history for mobile %s: %s", mobile, history)
         response = chat(user_input, config, history)
         chat_response = response.content
         

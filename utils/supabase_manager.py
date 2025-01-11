@@ -43,54 +43,113 @@ class SupabaseManager:
             return False
 
     def get_chat_history(self, mobile: str) -> List[Dict[str, Any]]:
-        """Get chat history for a user from Supabase"""
-        try:
-            # Build the URL with query parameters
-            query_url = f"{self.url}?select=user,response&mobile=eq.{mobile}&order=created_at.asc"
+        """
+        Get chat history for a user from Supabase
+        
+        Args:
+            mobile: User's mobile number to fetch chat history
             
-            # Log the request details for debugging
-            print(f"\nFetching chat history:")
+        Returns:
+            List of dictionaries containing user messages and responses
+        """
+        try:
+            # Properly encode the mobile number for URL
+            encoded_mobile = requests.utils.quote(mobile)
+            
+            # Build the query with specific columns and conditions
+            query_url = (
+                f"{self.url}"
+                f"?select=user,response"
+                f"&mobile=eq.{encoded_mobile}"
+                f"&order=created_at.asc"
+            )
+            
+            self.logger.debug(f"Fetching chat history for mobile: {mobile}")
             
             response = requests.get(
                 query_url,
-                headers=self.headers
+                headers={
+                    **self.headers,
+                    'Prefer': 'return=representation'  # Ensures Supabase returns the data
+                }
             )
             
-            # Log response details
-            print(f"\nResponse status: {response.status_code}")
-            print(f"Response headers: {response.headers}")
+            response.raise_for_status()  # Raise exception for non-200 status codes
             
-            # Check if response is successful
-            if response.status_code == 200:
-                data = response.json()
-                print(f"\nRaw response data: {data}")
-                
-                messages = [
-                    {
-                        "user": msg["user"],
-                        "response": msg["response"]
-                    }
-                    for msg in data
-                ]
-                
-                print(f"\nFormatted messages: {messages}")
-                self.logger.info(f"Successfully retrieved {len(messages)} messages for {mobile}")
-                return messages
-                
-            else:
-                print(f"\nError response: {response.text}")
-                self.logger.error(f"Failed to get chat history. Status code: {response.status_code}")
-                self.logger.error(f"Response: {response.text}")
-                return []
-                
-        except requests.exceptions.RequestException as e:
-            print(f"\nRequest error: {str(e)}")
-            self.logger.error(f"Request failed: {str(e)}")
+            data = response.json()
+            self.logger.debug(f"Retrieved {len(data)} chat records")
+            
+            # Filter out any records where either user or response is None/empty
+            messages = [
+                {
+                    "user": msg["user"],
+                    "response": msg["response"]
+                }
+                for msg in data
+                if msg.get("user") and msg.get("response")  # Only include complete conversations
+            ]
+            
+            return messages
+            
+        except requests.exceptions.HTTPError as e:
+            self.logger.error(f"HTTP Error in get_chat_history: {str(e)}")
+            if response.status_code == 409:
+                self.logger.error("Conflict error - possible duplicate or constraint violation")
             return []
             
         except Exception as e:
-            print(f"\nUnexpected error: {str(e)}")
-            self.logger.error(f"Unexpected error: {str(e)}")
+            self.logger.error(f"Error in get_chat_history: {str(e)}")
             return []
+    
+    # def get_chat_history(self, mobile: str) -> List[Dict[str, Any]]:
+    #     """Get chat history for a user from Supabase"""
+    #     try:
+    #         # Build the URL with query parameters
+    #         query_url = f"{self.url}?select=user,response&mobile=eq.{mobile}&order=created_at.asc"
+            
+    #         # Log the request details for debugging
+    #         print(f"\nFetching chat history:")
+            
+    #         response = requests.get(
+    #             query_url,
+    #             headers=self.headers
+    #         )
+            
+    #         # Log response details
+    #         print(f"\nResponse status: {response.status_code}")
+    #         print(f"Response headers: {response.headers}")
+            
+    #         # Check if response is successful
+    #         if response.status_code == 200:
+    #             data = response.json()
+    #             print(f"\nRaw response data: {data}")
+                
+    #             messages = [
+    #                 {
+    #                     "user": msg["user"],
+    #                     "response": msg["response"]
+    #                 }
+    #                 for msg in data
+    #             ]
+                
+    #             print(f"\nFormatted messages: {messages}")
+    #             self.logger.info(f"Successfully retrieved {len(messages)} messages for {mobile}")
+    #             return messages
+                
+    #         else:
+    #             print(f"\nError response: {response.text}")
+    #             self.logger.error(f"Failed to get chat history. Status code: {response.status_code}")
+    #             self.logger.error(f"Response: {response.text}")
+    #             return []
+                
+    #     except requests.exceptions.RequestException as e:
+    #         print(f"\nRequest error: {str(e)}")
+    #         self.logger.error(f"Request failed: {str(e)}")
+    #         return []
+            
+    #     except Exception as e:
+    #         print(f"\nUnexpected error: {str(e)}")
+    #         self.logger.error(f"Unexpected error: {str(e)}")
+    #         return []
                 
        
