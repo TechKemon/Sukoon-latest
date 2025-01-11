@@ -1,8 +1,12 @@
-from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
-from typing import TypedDict, Annotated
+from fastapi import FastAPI, HTTPException, Query, Depends
+# Additional imports for handling CORS (Cross-Origin Resource Sharing)
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import httpx
+from pydantic import BaseModel, Field
+from typing import TypedDict, Annotated, List
+
+import logging
+# import httpx
 from typing import Literal
 import os
 
@@ -13,168 +17,166 @@ import os
 # from datetime import datetime
 
 # from sukoon import chat
-from new import chat
+from new import chat # Assumes chat is a synchronous function; convert to async if needed.
+from utils.supabase_manager import SupabaseManager
 
-from fastapi.middleware.cors import CORSMiddleware
+# Set up basic logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("myca_api.log"),  # Log messages are written to this file
+        logging.StreamHandler()  # Also write to the console
+        ]
+    )
+logger = logging.getLogger(__name__)  # New change: Using a logger instead of print
 
-app = FastAPI(title="MYCA", description="API for the MYCA mental health support system")
+# Create a global instance once and reuse it
+# supabase_manager = SupabaseManager()
+# Instantiate the Supabase manager once and use Dependency Injection for scalability
+def get_supabase_manager() -> SupabaseManager:
+    return SupabaseManager()
+
+app = FastAPI(
+    title="MYCA", 
+    description="API for the MYCA mental health support system",
+    version="1.0"
+    )
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],  # ["https://yourdomain.com", "https://anotherdomain.com"],  # Only allow trusted domains
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["GET", "POST"],  #  => Only allow specific HTTP methods ELSE # Allows all headers using ["*"]
+    allow_headers=["Authorization", "Content-Type"],  # Only allow necessary headers ELSE # Allows all headers using ["*"]
 )
 
 class MYCARequest(BaseModel):
-    input: str
+    mobile: str = Field(
+        ...,
+        pattern=r"^\d{10}$", # ensuring mobile is a 10-digit number
+        description="a 10-digit mobile number"
+    )
+    input: str = Field(..., description="User Chat Message")
 
 class MYCAResponse(BaseModel):
-    output: str
+    output: str = Field(..., description="Chatbot response")
 
-class FeedbackRequest(BaseModel):
-    feedback: Literal["like", "dislike"]
-    message: str
-    message_id: str
+# Request model for logging chat conversation
+class ChatRequest(BaseModel):
+    mobile: str = Field(
+        ...,
+        pattern=r"^\d{10}$", # ensuring mobile is a 10-digit number
+        description="a 10-digit mobile number"
+    ) # mobile: Annotated[str, Query(..., min_length=10, max_length=10)]
+    user: str = Field(..., description="User input")
+    response: str = Field(..., description="Chatbot response")
+
+class ChatResponse(BaseModel):
+    messages: List[dict] = Field([], description="List of past chat messaages")
 
 @app.post("/query", response_model=MYCAResponse)
-async def process_query(request: MYCARequest):
+async def process_query(request: MYCARequest, supabase: SupabaseManager = Depends(get_supabase_manager)):
     try:
-        config = {"configurable": {"thread_id": "1", "user_id": "1"}}
+        """
+        Using Dependency Injection to pass in our SupabaseManager.
+        """
+        # New change: Externalize config if necessary (e.g., read from environment variables)
+        config = {"configurable": {"thread_id": "1", "user_id": "1"}} # CHECK THESE VALUES
         user_input = request.input
-        response = chat(user_input, config)
-        return MYCAResponse(output=response.content)
+        mobile= request.mobile
+        
+        # Process chat. If chat() is blocking, consider running it in a threadpool using run_in_executor.
+        history = supabase.get_chat_history(mobile=mobile)
+        response = chat(user_input, config, history)
+        chat_response = response.content
+        
+        # Log chat asynchronously if the underlying supabase.log_chat supports it,
+        # otherwise, consider running it in the background.
+        try:
+            supabase.log_chat(
+                mobile=mobile,
+                user=user_input,
+                response=chat_response
+            )
+            logger.info("Chat logged successfully for mobile: %s", mobile)
+        except Exception as log_error:
+            logger.error("Failed to log chat for mobile %s: %s", mobile, log_error)
+        
+        return MYCAResponse(output=chat_response)
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
-    
-@app.get("/query", response_model=MYCAResponse)
-async def process_query_get(input: str = Query(..., description="Please tell what brings you here?")):
+
+@app.get("/fetch_convo", response_model=ChatResponse)
+async def fetch_history(
+    mobile: str = Query(..., pattern=r"^\d{10}$", description="10 digit mobile number"),
+    supabase: SupabaseManager = Depends(get_supabase_manager)
+):
+    """
+    Endpoint to fetch chat conversation history for a given mobile.
+    New change: Validate mobile number through Query parameters.
+    """
     try:
-        config = {"configurable": {"thread_id": "1", "user_id": "1"}}
-        response = chat(input, config)
-        return MYCAResponse(output=response.content)
+        history = supabase.get_chat_history(mobile=mobile)
+        return ChatResponse(messages=history or [])
     except Exception as error:
-        raise HTTPException(status_code=500, detail=str(error))
+        logger.exception("Error fetching conversation history for mobile: %s", mobile)
+        raise HTTPException(status_code=500, detail="Failed to fetch conversation history")
+
+@app.post("/log_convo")
+async def save_history(request: ChatRequest, supabase: SupabaseManager = Depends(get_supabase_manager)):
+    try:
+        status = supabase.log_chat(
+            mobile=request.mobile,
+            user=request.user,
+            response=request.response
+        )
+        if status:
+            return {"success": True}
+        else:
+            logger.warning("Chat log returned a false status for mobile: %s", request.mobile)
+            return {"success": False}
+    except Exception as error:
+        logger.exception("Error saving conversation history for mobile: %s", request.mobile)
+        raise HTTPException(status_code=500, detail="Failed to log conversation history")
+
 
 @app.get("/")
 async def root():
+    """
+    Root endpoint to welcome users.
+    """
     return {"message": "Welcome to the MYCA API. Use the /docs or /query endpoint to interact with the system."}
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
+# Only run if this module is executed as the main script
+if __name__ == "__main__":
+    # New change: Read host/port from environment variables if deployed in different environments.
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host=host, port=port)
+    
 # @app.post("/docs")
 # async def redirect_root_to_docs():
 #     return RedirectResponse("/docs")
+ 
+# class FeedbackRequest(BaseModel):
+#     feedback: str = Field(..., description='Feedback must be "like" or "dislike"') # Literal["like", "dislike"] # 
+#     message: str
+#     message_id: str
 
-if __name__ == "__main__":
-    uvicorn.run(app, host = "0.0.0.0", port=8000)
+# # New change: Use a validator to ensure only allowed values for feedback
+# @classmethod
+# def __get_validators__(cls):
+#     yield cls.validate_feedback
 
-# @app.post("/feedback", response_model=MYCAResponse)
-# async def submit_feedback(request: FeedbackRequest):
-#     try:
-#         async with httpx.AsyncClient() as client:
-#             response = await client.post(
-#                 "https://supabase.pplus.ai/rest/v1/Feedback",
-#                 headers={
-#                     'Content-Type': 'application/json',
-#                     'apikey': os.getenv('SUPABASE_API_KEY'),
-#                     'Authorization': f"Bearer {os.getenv('SUPABASE_AUTHORIZATION_TOKEN')}",
-#                     'Prefer': 'return=minimal'
-#                 },
-#                 json={
-#                     'action': request.feedback,
-#                     'feedback': request.message,
-#                     'message_id': request.message_id
-#                 },
-#                 timeout=10.0
-#             )
-            
-#             if response.status_code != 201:
-#                 raise HTTPException(
-#                     status_code=response.status_code,
-#                     detail="Failed to submit feedback to Supabase"
-#                 )
-                
-#             return MYCAResponse(output="Feedback submitted successfully")
-            
-#     except httpx.TimeoutException:
-#         raise HTTPException(status_code=504, detail="Request to Supabase timed out")
-#     except Exception as error:
-#         raise HTTPException(status_code=500, detail=str(error))
-        
-    
-    # try {
-    #     const response = await fetch("https://supabase.pplus.ai/rest/v1/Feedback", {
-    #     method: 'POST',
-    #     headers: {
-    #         'Content-Type': 'application/json',
-    #         'apikey': SUPABASE_API_KEY,
-    #         'Authorization': SUPABASE_AUTHORIZATION_TOKEN,
-    #         'Prefer': 'return=minimal'
-    #     },
-    #     body: JSON.stringify({
-    #         'action': feedback.feedback,
-    #         'feedback': feedbackMessage,
-    #     }),
-    #     });
-
-    #     if (response.status !== 201) {
-    #     throw new Error(`HTTP error! Status: ${response.status}`);
-    #     }
-
-    #     setFeedback("");
-    #     setFeedbackMessage("");
-
-    #     if (feedback.feedback === "like") {
-    #     // remove the message from the list of dislikedMessages, if it was added earlier (only for local state)
-    #     if (dislikedMessages.includes(feedback.messageId) === true) {
-    #         setDislikedMessages(dislikedMessages => dislikedMessages.filter(item => item !== feedback.messageId));
-    #     }
-    #     setLikedMessages(likedMessages => [...likedMessages, feedback.messageId]);
-    #     } else {
-    #     // remove the message from the list of setLikedMessages, if it was added earlier (only for local state)
-    #     if (likedMessages.includes(feedback.messageId) === true) {
-    #         setLikedMessages(likedMessages => likedMessages.filter(item => item !== feedback.messageId));
-    #     }
-    #     setDislikedMessages(dislikedMessages => [...dislikedMessages, feedback.messageId]);
-    #     }
-    # } catch (error) {
-    #     console.error('Error:', error);
-    # }
-    # }
-    
-
-
-# for google analytics
-# templates = Jinja2Templates(directory="templates")
-
-# # Track conversation events
-# async def track_conversation_event(conversation_id: str, event_type: str, data: dict):
-#     # Send to Google Analytics
-#     event = {
-#         'conversation_id': conversation_id,
-#         'event_type': event_type,
-#         'timestamp': datetime.utcnow().isoformat(),
-#         'data': data
-#     }
-#     # Log for analysis
-#     print(json.dumps(event))
-
-# @app.post("/chat")
-# async def chat_endpoint(request: Request):
-#     # Your existing chat logic
-#     conversation_id = "unique_id"  # Generate unique ID
-    
-#     # Track conversation start
-#     await track_conversation_event(
-#         conversation_id=conversation_id,
-#         event_type="conversation_start",
-#         data={
-#             'user_id': request.client.host,
-#             'timestamp': datetime.utcnow().isoformat()
-#         }
-#     )
+# @classmethod
+# def validate_feedback(cls, value):
+#     allowed = {"like", "dislike"}
+#     if value not in allowed:
+#         raise ValueError("Feedback must be either 'like' or 'dislike'")
+#     return value

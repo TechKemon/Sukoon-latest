@@ -216,8 +216,37 @@ memory = MemorySaver()
 graph = workflow.compile(checkpointer=memory, store=store)
 
 # Function to run a conversation turn
-def chat(message: str, config: dict):
-    result = graph.invoke({"messages": [HumanMessage(content=message)]}, config=config)
+def chat(message: str, config: dict, history: List):
+    try:
+    # Convert history messages to LangChain message format
+        messages = []
+        if history:
+                for msg in history:
+                    # Add user message if it exists and is not empty
+                    if msg.get("user"):
+                        messages.append(HumanMessage(content=msg["user"]))
+                    # Add AI response if it exists and is not empty
+                    if msg.get("response"):
+                        messages.append(AIMessage(content=msg["response"]))
+        
+        # Add current message
+        if not message.strip():
+            raise ValueError("Empty message received")
+        
+        # Add current message
+        messages.append(HumanMessage(content=message))
+        
+        # Invoke the model with messages and config
+        try:
+            result = graph.invoke({"messages": messages}, config=config)
+            return result["messages"][-1]
+        except Exception as e:
+            logging.error(f"Error invoking model: {str(e)}")
+            return AIMessage(content="I apologize, but I'm having trouble processing your message. Could you please try again?")
+        
+    except Exception as e:
+        logging.error(f"Error in chat function: {str(e)}")
+        return AIMessage(content="I encountered an error. Please try again or contact support if the issue persists.")
     # for update in graph.stream(
     #         {"messages": [HumanMessage(content=message)]}, config=config, stream_mode="messages" # updates, values, debug
     #     ):
@@ -229,7 +258,7 @@ def chat(message: str, config: dict):
     #         # if isinstance(ai_message, AIMessageChunk):
     #         print(ai_message.content, end="", flush=True)
                 # yield ai_message
-    return result["messages"][-1]
+    # return result["messages"][-1]
 
 if __name__ == "__main__":
     # async def main():
