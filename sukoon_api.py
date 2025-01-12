@@ -17,7 +17,7 @@ import os
 # from datetime import datetime
 
 # from sukoon import chat
-from new import chat # Assumes chat is a synchronous function; convert to async if needed.
+from myca_supa import chat # Assumes chat is a synchronous function; convert to async if needed.
 from utils.supabase_manager import SupabaseManager
 
 # Set up basic logging
