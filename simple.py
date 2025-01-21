@@ -4,12 +4,20 @@ import anthropic # type: ignore
 import os
 import yaml
 # set api_key
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
 
-claude_api_key = os.getenv("ANTHROPIC_API_KEY")
+claude_api_key = os.getenv("ANTHROPIC_API_KEY", default=None)
 if not claude_api_key:
-    from dotenv import load_dotenv, find_dotenv
-    load_dotenv(find_dotenv())
+    # Load just the .env file and try again
+    load_dotenv(find_dotenv(), override=True)
+    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 client = anthropic.Anthropic(api_key=claude_api_key)
+
+# openai_api_key = os.getenv("OPENAI_API_KEY", default=None)
+# if not openai_api_key:
+#     load_dotenv(find_dotenv(), override=True)
+#     openai_api_key = os.getenv("OPENAI_API_KEY")
 
 def load_prompts(file_path='prompts.yaml'):
     with open(file_path, 'r') as file:
