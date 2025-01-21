@@ -47,17 +47,19 @@ def chat(query: str, chat_history: List) -> str:
                     })
         
         # Add current query
-        messages = formatted_history + [
+        system_prompt = f"{prompts['MYCA']}\nPrevious conversation history:\n{formatted_history}"
+        
+        chat = [
             {"role": "user", "content": query}
         ]
         
         try:
             message = client.messages.create(
-                system=prompts['MYCA'],
+                system=system_prompt,
                 model="claude-3-5-sonnet-20240620",
                 max_tokens=400,
                 temperature=0.9,
-                messages=messages
+                messages=chat
             )
             return message.content[0].text
             
