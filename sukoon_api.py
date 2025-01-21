@@ -17,7 +17,8 @@ import os
 # from datetime import datetime
 
 # from sukoon import chat
-from myca_supa import chat # Assumes chat is a synchronous function; convert to async if needed.
+# from myca_supa import chat # Assumes chat is a synchronous function; convert to async if needed.
+from simple import chat
 from utils.supabase_manager import SupabaseManager
 
 # Set up basic logging
@@ -76,6 +77,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     messages: List[dict] = Field([], description="List of past chat messaages")
 
+# API ENDPOINT USED IN CHATBOT
 @app.post("/query", response_model=MYCAResponse)
 async def process_query(request: MYCARequest, supabase: SupabaseManager = Depends(get_supabase_manager)):
     try:
@@ -83,15 +85,15 @@ async def process_query(request: MYCARequest, supabase: SupabaseManager = Depend
         Using Dependency Injection to pass in our SupabaseManager.
         """
         # New change: Externalize config if necessary (e.g., read from environment variables)
-        config = {"configurable": {"thread_id": "1", "user_id": "1"}} # CHECK THESE VALUES
+        # config = {"configurable": {"thread_id": "1", "user_id": "1"}} # CHECK THESE VALUES
         user_input = request.input
         mobile= request.mobile
         
         # Process chat. If chat() is blocking, consider running it in a threadpool using run_in_executor.
         history = supabase.get_chat_history(mobile=mobile)
         logger.info("Retrieved chat history for mobile %s: %s", mobile, history)
-        response = chat(user_input, config, history)
-        chat_response = response.content
+        response = chat(user_input, history)
+        # chat_response = response.content
         
         # Log chat asynchronously if the underlying supabase.log_chat supports it,
         # otherwise, consider running it in the background.
@@ -99,13 +101,13 @@ async def process_query(request: MYCARequest, supabase: SupabaseManager = Depend
             supabase.log_chat(
                 mobile=mobile,
                 user=user_input,
-                response=chat_response
+                response=response
             )
             logger.info("Chat logged successfully for mobile: %s", mobile)
         except Exception as log_error:
             logger.error("Failed to log chat for mobile %s: %s", mobile, log_error)
         
-        return MYCAResponse(output=chat_response)
+        return MYCAResponse(output=response)
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
@@ -181,3 +183,37 @@ if __name__ == "__main__":
 #     if value not in allowed:
 #         raise ValueError("Feedback must be either 'like' or 'dislike'")
 #     return value
+
+# with langgraph code
+# @app.post("/query", response_model=MYCAResponse)
+# async def process_query(request: MYCARequest, supabase: SupabaseManager = Depends(get_supabase_manager)):
+#     try:
+#         """
+#         Using Dependency Injection to pass in our SupabaseManager.
+#         """
+#         # New change: Externalize config if necessary (e.g., read from environment variables)
+#         config = {"configurable": {"thread_id": "1", "user_id": "1"}} # CHECK THESE VALUES
+#         user_input = request.input
+#         mobile= request.mobile
+        
+#         # Process chat. If chat() is blocking, consider running it in a threadpool using run_in_executor.
+#         history = supabase.get_chat_history(mobile=mobile)
+#         logger.info("Retrieved chat history for mobile %s: %s", mobile, history)
+#         response = chat(user_input, config, history)
+#         chat_response = response.content
+        
+#         # Log chat asynchronously if the underlying supabase.log_chat supports it,
+#         # otherwise, consider running it in the background.
+#         try:
+#             supabase.log_chat(
+#                 mobile=mobile,
+#                 user=user_input,
+#                 response=chat_response
+#             )
+#             logger.info("Chat logged successfully for mobile: %s", mobile)
+#         except Exception as log_error:
+#             logger.error("Failed to log chat for mobile %s: %s", mobile, log_error)
+        
+#         return MYCAResponse(output=chat_response)
+#     except Exception as error:
+#         raise HTTPException(status_code=500, detail=str(error))
