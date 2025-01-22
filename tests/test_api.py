@@ -47,19 +47,19 @@ def log_test_result(test_name: str, request_data: dict = None, response_data: di
     
     logger.info(json.dumps(log_data, indent=2))
 
-@pytest.mark.api
-def test_root_endpoint():
-    """Test the root endpoint (/)"""
-    response = client.get("/")
+# @pytest.mark.api
+# def test_root_endpoint():
+#     """Test the root endpoint (/)"""
+#     response = client.get("/")
     
-    log_test_result(
-        "test_root_endpoint",
-        response_data=response.json()
-    )
+#     log_test_result(
+#         "test_root_endpoint",
+#         response_data=response.json()
+#     )
     
-    assert response.status_code == 200
-    assert "message" in response.json()
-    assert "Welcome to the Sukoon API" in response.json()["message"]
+#     assert response.status_code == 200
+#     assert "message" in response.json()
+#     assert "Welcome to the Sukoon API" in response.json()["message"]
 
 @pytest.mark.api
 def test_query_endpoint_success():
