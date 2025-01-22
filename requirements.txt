@@ -9,15 +9,17 @@ python-dotenv
 pydantic
 pyyaml
 anthropic
+requests
+supabase
 # langchain-openai
 # langchain-anthropic
-# redis
 # langgraph
 # langchain-community
 # langchain-core
 # langchain
 # langgraph-sdk
 # llama-index
+# redis
 # uptrain
 # langgraph-checkpoint-sqlite
 # langsmith
