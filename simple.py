@@ -69,7 +69,7 @@ def chat(query: str, chat_history: List) -> str:
                     "cache_control": {"type": "ephemeral"}
                 }], # prompt
                 model="claude-3-5-sonnet-20241022",
-                max_tokens=1500,
+                max_tokens=1024,
                 temperature=0.9,
                 messages=history
             )
