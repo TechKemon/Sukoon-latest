@@ -34,7 +34,7 @@ def chat(query: str, chat_history: List) -> str:
         prompts = load_prompts()
         prompt = f"{prompts['MYCA']}"
         
-        print(f"Received chat_history: {json.dumps(chat_history, indent=2)}")
+        # print(f"Received chat_history: {json.dumps(chat_history, indent=2)}")
         # Format history to maintain conversation flow in pairs
         history = []
         if chat_history:
@@ -52,7 +52,7 @@ def chat(query: str, chat_history: List) -> str:
         
         # Add current query to history
         history.append({"role": "user", "content": query})
-        print(f"FULL CONVERSATION HISTORY is \n {history} \n")
+        # print(f"FULL CONVERSATION HISTORY is \n {history} \n")
         
         # # Add current query
         # system_prompt = f"{prompts['MYCA']}\nPrevious conversation history:\n{formatted_history}"
@@ -74,7 +74,7 @@ def chat(query: str, chat_history: List) -> str:
                 messages=history
             )
             answer = response.content[0].text
-            print(answer) # for debugging
+            # print(answer) # for debugging
             return answer
             
         except Exception as e:

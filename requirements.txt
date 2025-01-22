@@ -1,17 +1,6 @@
-langgraph
-langchain-community
-langchain-core
-langchain-openai
-langchain-anthropic
-langchain
 fastapi
 uvicorn
 pytest
-langgraph-sdk
-llama-index
-uptrain
-langgraph-checkpoint-sqlite
-langsmith
 portkey-ai
 pytest-asyncio
 pytest-html
@@ -19,8 +8,20 @@ httpx
 python-dotenv
 pydantic
 pyyaml
-redis
-#posthog-js
+anthropic
+# langchain-openai
+# langchain-anthropic
+# redis
+# langgraph
+# langchain-community
+# langchain-core
+# langchain
+# langgraph-sdk
+# llama-index
+# uptrain
+# langgraph-checkpoint-sqlite
+# langsmith
+# posthog-js
 # langchainhub==0.1.15
 # langchain-openai==0.1.3
 # langchain==0.1.16

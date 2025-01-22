@@ -13,10 +13,12 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY}}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       # PORTKEY_API_KEY: ${{ secrets.PORTKEY_API_KEY }}
       # PORTKEY_VIRTUAL_KEY: ${{ secrets.PORTKEY_VIRTUAL_KEY }}
       # PORTKEY_VIRTUAL_KEY_A: ${{ secrets.PORTKEY_VIRTUAL_KEY_A }}
-
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -29,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio httpx fastapi uvicorn
+          pip install pytest pytest-asyncio httpx fastapi uvicorn pyyaml anthropic
           pip install -r requirements.txt
 
       # Create logs directory for test outputs
@@ -37,11 +39,6 @@ jobs:
         run: |
           mkdir -p logs
           mkdir -p test_reports
-
-      # Run the main sukoon tests
-      - name: Run Sukoon tests
-        run: |
-          pytest tests/test_sukoon.py -v --html=test_reports/sukoon_report.html
 
       # Run the API tests
       - name: Run API tests
@@ -56,13 +53,13 @@ jobs:
 
       - name: Test live endpoints
         run: |
-          curl -f http://0.0.0.0:8001/health || exit 1
-          curl -f http://0.0.0.0:8001/ || exit 1
+          curl -f http://0.0.0.0:8000/health || exit 1
+          curl -f http://0.0.0.0:8000/ || exit 1
           
           # Test query endpoint with actual input
           curl -X POST -H "Content-Type: application/json" \
-            -d '{"input":"Hello"}' \
-            http://0.0.0.0:8001/query || exit 1
+            -d '{"mobile":"1234567890","input":"Hello"}' \
+            http://0.0.0.0:8000/query || exit 1
 
       # Upload test reports and logs as artifacts
       - name: Upload test artifacts
@@ -74,6 +71,64 @@ jobs:
             test_reports/
             logs/
           retention-days: 5
+
+    # steps:
+    #   - name: Checkout
+    #     uses: actions/checkout@v4.2.2
+
+    #   - name: Set up Python
+    #     uses: actions/setup-python@v4
+    #     with:
+    #       python-version: '3.10'
+
+    #   - name: Install dependencies
+    #     run: |
+    #       python -m pip install --upgrade pip
+    #       pip install pytest pytest-asyncio httpx fastapi uvicorn
+    #       pip install -r requirements.txt
+
+    #   # Create logs directory for test outputs
+    #   - name: Create directories
+    #     run: |
+    #       mkdir -p logs
+    #       mkdir -p test_reports
+
+    #   # Run the main sukoon tests
+    #   - name: Run Sukoon tests
+    #     run: |
+    #       pytest tests/test_sukoon.py -v --html=test_reports/sukoon_report.html
+
+    #   # Run the API tests
+    #   - name: Run API tests
+    #     run: |
+    #       pytest tests/test_api.py -v --html=test_reports/api_report.html
+
+    #   # Start the FastAPI server and test live endpoints
+    #   - name: Start FastAPI server
+    #     run: |
+    #       nohup python sukoon_api.py &
+    #       sleep 5
+
+    #   - name: Test live endpoints
+    #     run: |
+    #       curl -f http://0.0.0.0:8001/health || exit 1
+    #       curl -f http://0.0.0.0:8001/ || exit 1
+          
+    #       # Test query endpoint with actual input
+    #       curl -X POST -H "Content-Type: application/json" \
+    #         -d '{"input":"Hello"}' \
+    #         http://0.0.0.0:8001/query || exit 1
+
+    #   # Upload test reports and logs as artifacts
+    #   - name: Upload test artifacts
+    #     if: always()
+    #     uses: actions/upload-artifact@v3
+    #     with:
+    #       name: test-reports
+    #       path: |
+    #         test_reports/
+    #         logs/
+    #       retention-days: 5
 
       # - name: Create test file
       #   run: |

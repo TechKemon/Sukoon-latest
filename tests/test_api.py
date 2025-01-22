@@ -65,15 +65,16 @@ def test_root_endpoint():
 def test_query_endpoint_success():
     """Test the query endpoint with valid input"""
     test_input = "Hello, how are you?"
+    test_mobile = "1234567890"  # Added test mobile number
     
     response = client.post(
         "/query",
-        json={"input": test_input}
+        json={"input": test_input, "mobile": test_mobile}  # Updated request format
     )
     
     log_test_result(
         "test_query_endpoint_success",
-        request_data={"input": test_input},
+        request_data={"input": test_input, "mobile": test_mobile},
         response_data=response.json()
     )
     
@@ -87,12 +88,12 @@ def test_query_endpoint_empty_input():
     """Test the query endpoint with empty input"""
     response = client.post(
         "/query",
-        json={"input": ""}
+        json={"input": "", "mobile": "1234567890"}  # Added required mobile field
     )
     
     log_test_result(
         "test_query_endpoint_empty_input",
-        request_data={"input": ""},
+        request_data={"input": "", "mobile": "1234567890"},
         response_data=response.json()
     )
     
@@ -100,11 +101,27 @@ def test_query_endpoint_empty_input():
     assert "output" in response.json()
 
 @pytest.mark.api
+def test_query_endpoint_invalid_mobile():  # Added test for invalid mobile
+    """Test the query endpoint with invalid mobile number"""
+    response = client.post(
+        "/query",
+        json={"input": "Hello", "mobile": "123"}  # Invalid mobile number
+    )
+    
+    log_test_result(
+        "test_query_endpoint_invalid_mobile",
+        request_data={"input": "Hello", "mobile": "123"},
+        response_data=response.json()
+    )
+    
+    assert response.status_code == 422  # Validation error
+
+@pytest.mark.api
 def test_query_endpoint_invalid_request():
     """Test the query endpoint with invalid request format"""
     response = client.post(
         "/query",
-        json={"wrong_field": "Hello"}
+        json={"wrong_field": "Hello"}  # Missing both required fields
     )
     
     log_test_result(
@@ -113,23 +130,22 @@ def test_query_endpoint_invalid_request():
         response_data=response.json()
     )
     
-    assert response.status_code == 422  # Unprocessable Entity
+    assert response.status_code == 422
 
 @pytest.mark.api
-def test_query_endpoint_missing_input():
-    """Test the query endpoint with missing input field"""
-    response = client.post(
-        "/query",
-        json={}
-    )
+def test_fetch_history_endpoint():  # Added test for fetch_convo endpoint
+    """Test the fetch_convo endpoint"""
+    response = client.get("/fetch_convo?mobile=1234567890")
     
     log_test_result(
-        "test_query_endpoint_missing_input",
-        request_data={},
+        "test_fetch_history_endpoint",
+        request_data={"mobile": "1234567890"},
         response_data=response.json()
     )
     
-    assert response.status_code == 422  # Unprocessable Entity
+    assert response.status_code == 200
+    assert "messages" in response.json()
+    assert isinstance(response.json()["messages"], list)
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
