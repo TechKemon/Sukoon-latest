@@ -11,6 +11,8 @@ pyyaml
 anthropic
 requests
 supabase
+# cryptography
+# hashlib
 # langchain-openai
 # langchain-anthropic
 # langgraph
