@@ -145,24 +145,127 @@ class SupabaseManager:
             return []
                 
 '''
-# MD5 will always generate the same hash for the same input. uses 128 bits (32 hex characters)
-For more security, use SHA-256 from same hashlib library
+# For Hinglish and Marathi detection
 
-mobile1 = "1234567890"
-mobile2 = "9876543210"
+from typing import List, Optional, Tuple
+from presidio_analyzer import AnalyzerEngine, RecognizerRegistry
+from presidio_anonymizer import AnonymizerEngine
+from presidio_anonymizer.entities import OperatorConfig
+import json
 
-hash1 = hashlib.md5(mobile1.encode()).hexdigest()  # e807f1fcf82d132f9bb018ca6738a19f
-hash2 = hashlib.md5(mobile2.encode()).hexdigest()  # 0fea51d5a21a1a4547342c81239a7c11
+class MultilingualNameDetector:
+    def __init__(self):
+        # Initialize either OpenAI client or local LLM
+        self.setup_llm()
+        
+    def setup_llm(self):
+        """Setup LLM - either API based or local"""
+        try:
+            # Option 1: OpenAI
+            from openai import OpenAI
+            self.llm_client = OpenAI()
+            self.llm_type = "openai"
+            
+            # Option 2: Local LLM (e.g., using ctransformers)
+            # from ctransformers import AutoModelForCausalLM
+            # self.llm_client = AutoModelForCausalLM.from_pretrained(
+            #     "TheBloke/Llama-2-7B-Chat-GGUF",
+            #     model_file="llama-2-7b-chat.Q4_K_M.gguf"
+            # )
+            # self.llm_type = "local"
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize LLM: {str(e)}")
+            self.llm_client = None
+    
+    def detect_names_llm(self, text: str) -> List[Tuple[str, int, int]]:
+        """
+        Use LLM to detect names in multilingual text
+        Returns list of (name, start_pos, end_pos)
+        """
+        try:
+            if not self.llm_client:
+                return []
+                
+            # Prompt engineering for name detection
+            prompt = f"""
+            Analyze this text and identify any person names (including Indian names).
+            Text: "{text}"
+            
+            Return only a JSON array of objects with format:
+            [{{"name": "detected_name", "start": start_position, "end": end_position}}]
+            
+            If no names found, return empty array [].
+            """
+            
+            if self.llm_type == "openai":
+                response = self.llm_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a precise name detection tool."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0
+                )
+                result = json.loads(response.choices[0].message.content)
+                
+            else:  # local LLM
+                response = self.llm_client.generate(prompt, max_tokens=200)
+                result = json.loads(response)
+                
+            return [(item["name"], item["start"], item["end"]) for item in result]
+            
+        except Exception as e:
+            self.logger.error(f"LLM name detection failed: {str(e)}")
+            return []
 
-# for salting 
-def salt_and_hash(mobile):
-    salt = os.urandom(32)  # Generate a random salt
-    key = hashlib.pbkdf2_hmac(
-        'sha256', 
-        str(mobile).encode('utf-8'), 
-        salt, 
-        100000  # Number of iterations
-    )
-    return salt.hex() + key.hex()  # Store both salt and key
+class SupabaseManager:
+    def __init__(self, ...):
+        # ... existing init code ...
+        self.name_detector = MultilingualNameDetector()
+        self.analyzer = AnalyzerEngine()
+        self.anonymizer = AnonymizerEngine()
+    
+    def anonymize_text(self, text: str) -> str:
+        """Anonymize PII (names) using both Presidio and LLM"""
+        try:
+            # 1. First try Presidio for English names
+            analyzer_results = self.analyzer.analyze(
+                text=text,
+                entities=["PERSON"],
+                language='en'
+            )
+            
+            # 2. Then use LLM for additional name detection
+            llm_detected_names = self.name_detector.detect_names_llm(text)
+            
+            # 3. Combine results (you'll need to convert LLM results to Presidio format)
+            # This is a simplified version - you might need more sophisticated merging
+            for name, start, end in llm_detected_names:
+                analyzer_results.append(
+                    # Create Presidio RecognizerResult object
+                    RecognizerResult(
+                        entity_type="PERSON",
+                        start=start,
+                        end=end,
+                        score=0.85  # Confidence score
+                    )
+                )
+            
+            # 4. Anonymize using combined results
+            anonymized_results = self.anonymizer.anonymize(
+                text=text,
+                analyzer_results=analyzer_results,
+                operators={
+                    "PERSON": OperatorConfig("replace", {"new_value": "<NAME>"})
+                }
+            )
+            
+            return anonymized_results.text
+            
+        except Exception as e:
+            self.logger.error(f"Failed to anonymize text: {str(e)}")
+            return text
+
 
 '''
