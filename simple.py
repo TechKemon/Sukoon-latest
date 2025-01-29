@@ -87,9 +87,33 @@ def chat(query: str, chat_history: List) -> str:
         # ]
         
         try:
+            if not client_claude:
+                raise RuntimeError("Anthropic client not initialized")
+                
+            response = client_claude.messages.create(
+                system=[{
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"}
+                }],
+                model="claude-3-5-haiku-latest",
+                max_tokens=1024,
+                temperature=0.9,
+                messages=history
+            )
+            resp = response.content[0].text
+            print("answer from claude is :", resp)
+            return resp
+
+        except Exception as e:
+            print(f"Anthropic Error: {str(e)}. Falling back to OpenAI...")
+                # raise RuntimeError("Anthropic client not initialized")
+    
+        # Try OpenAI as fallback
+        try:
             if client_openai:
                 response = client_openai.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-4o", # gpt-4o-mini
                     messages=[{"role": "system", "content": system_prompt}] + history,
                     temperature=0.9,
                     max_tokens=1024
@@ -97,43 +121,21 @@ def chat(query: str, chat_history: List) -> str:
                 answer = response.choices[0].message.content
                 print("answer from openai is :", answer)
                 return answer
-            else:
-                raise RuntimeError("OpenAI client not initialized")
-        
         except Exception as e:
-            print(f"OpenAI Error: {str(e)}. Falling back to Claude...")
-            
-            try:
-                if client_claude:
-                    response = client_claude.messages.create(
-                        system=[{
-                            "type": "text",
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"}
-                        }], # prompt
-                        model="claude-3-5-haiku-latest", #  claude-3-5-sonnet-20241022
-                        max_tokens=1024,
-                        temperature=0.9,
-                        messages=history
-                    )
-                    answer = response.content[0].text
-                    # print(answer) # for debugging
-                    return answer  
-            except Exception as e:
-                print(f"Claude Error: {str(e)}. Falling back to Gemini...")
-                # gemini method
-                # try:
-                #     model = clients["gemini"].GenerativeModel('gemini-pro')
-                #     chat = model.start_chat()
-                #     full_prompt = f"{system_prompt}\n\nConversation History:\n" + "\n".join(
-                #         [f"{msg['role']}: {msg['content']}" for msg in history]
-                #     )
-                #     response = chat.send_message(full_prompt)
-                #     return response.text
-                # except Exception as e:
-                #     print(f"Gemini API Error: {e}")
-                return "I apologize, but I'm having trouble processing your message. Could you please try again?"
-        
+            print(f"Openai Error: {str(e)}. Falling back to Gemini...")
+            # gemini method
+            # try:
+            #     model = clients["gemini"].GenerativeModel('gemini-pro')
+            #     chat = model.start_chat()
+            #     full_prompt = f"{system_prompt}\n\nConversation History:\n" + "\n".join(
+            #         [f"{msg['role']}: {msg['content']}" for msg in history]
+            #     )
+            #     response = chat.send_message(full_prompt)
+            #     return response.text
+            # except Exception as e:
+            #     print(f"Gemini API Error: {e}")
+            return "I apologize, but I'm having trouble processing your message. Could you please try again?"
+                
     except Exception as e:
         # Handle general errors
         return "I encountered an error. Please try again or contact support if the issue persists."
