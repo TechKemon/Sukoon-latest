@@ -2,6 +2,10 @@
 .DS_Store
 .files
 
+utils/supabase_manager_fernet.py
+utils/supabase_manager_hashed.py
+utils/supabase_manager_presidio.py
+
 archive/misc
 archive/dist
 archive/langchain-rag
@@ -187,3 +191,5 @@ cython_debug/
 docs/user_research/sukoon_persona.jpg
 temp.py
 requirements copy.txt
+requirements_debug.txt
+requirements.lock
