@@ -10,7 +10,7 @@ archive/storage
 archive/.files
 archive/41
 archive/sample_sukoon_code.ipynb
-
+voice
 langgraph/__pycache__/sukoon_role.cpython-310.pyc
 langgraph/__pycache__/sukoon_role.cpython-310.pyc
 langgraph/__pycache__/sukoon.cpython-310.pyc
@@ -186,3 +186,4 @@ cython_debug/
 #.idea/
 docs/user_research/sukoon_persona.jpg
 temp.py
+requirements copy.txt
