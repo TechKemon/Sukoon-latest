@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 # Set working directory
 WORKDIR /app
@@ -7,22 +7,26 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
+    curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
-# COPY sukoon.py .
-# COPY sukoon_api.py .
-
 # Copy all files
 COPY . .
 
-# Create necessary directories
+# Ensure necessary directories exist
 RUN mkdir -p /app/prompts
 RUN mkdir -p /app/storage
+
+# Make sure prompts.yaml is in the correct location
+# The simple.py file loads this file by default from the current directory
+RUN if [ ! -f /app/prompts.yaml ] && [ -f /app/prompts/prompts.yaml ]; then \
+        cp /app/prompts/prompts.yaml /app/; \
+    fi
 
 # Copy additional configuration files
 # COPY prompts.yaml .
@@ -32,6 +36,8 @@ RUN mkdir -p /app/storage
 ENV PYTHONPATH=/app
 ENV HOST=0.0.0.0
 ENV PORT=8000
+# ENV REDIS_HOST=localhost
+# ENV REDIS_PORT=6379
 # ENV SUPABASE_API_KEY=""  # Added for feedback endpoint
 # ENV SUPABASE_AUTHORIZATION_TOKEN=""  # Added for feedback endpoint
 

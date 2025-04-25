@@ -76,7 +76,7 @@ def chat(query: str, chat_history: List) -> str:
         system_prompt = prompts['MYCA'] 
         history = format_history(chat_history)
         # Add current query to history
-        history.append({"role": "user", "content": query})
+        history.append({"role": "user", "content": str(query)})
         # print(f"Received chat_history: {json.dumps(chat_history, indent=2)}")
         # print(f"FULL CONVERSATION HISTORY is \n {history} \n")
         # # Add current query

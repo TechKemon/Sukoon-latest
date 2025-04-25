@@ -163,7 +163,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host=host, port=port)
 
-    
+
 # @app.post("/docs")
 # async def redirect_root_to_docs():
 #     return RedirectResponse("/docs")
