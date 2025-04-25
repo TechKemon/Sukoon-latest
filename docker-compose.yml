@@ -1,35 +1,36 @@
 services:
   sukoon-backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8002:8000" # 8000 is our internal port
+      - "8000:8000"
     volumes:
       - .:/app
-      - ./data:/app/data  # For any data files
-      - ./storage:/app/storage  # For vector store persistence
+      - ./data:/app/data
+      - ./storage:/app/storage
     environment:
       - PYTHONPATH=/app
       - HOST=0.0.0.0
-      - PORT=8001
-      # Add your other environment variables here
+      - PORT=8000
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - PORTKEY_API_KEY=${PORTKEY_API_KEY}
-      - PORTKEY_VIRTUAL_KEY=${PORTKEY_VIRTUAL_KEY}
-      - PORTKEY_VIRTUAL_KEY_A=${PORTKEY_VIRTUAL_KEY_A}
+      # - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
+      # - PORTKEY_API_KEY=${PORTKEY_API_KEY}
+      # - PORTKEY_VIRTUAL_KEY=${PORTKEY_VIRTUAL_KEY}
+      # - PORTKEY_VIRTUAL_KEY_A=${PORTKEY_VIRTUAL_KEY_A}
     restart: unless-stopped
-  sukoon-frontend:
-    build: ./frontend-vite # ./sukoon-frontend for earlier version
-    # build:
-    #   context: ./frontend-vite
-    #   args:
-    #     SUPABASE_API_KEY: ${SUPABASE_API_KEY}
-    #     SUPABASE_AUTHORIZATION_TOKEN: ${SUPABASE_AUTHORIZATION_TOKEN}
-    #     BACKEND_ENDPOINT: ${BACKEND_ENDPOINT}
-    ports:
-      - "3002:80" # "3002:3000" for earlier version
-    restart: unless-stopped
+  # sukoon-frontend:
+  #   build: ./frontend-vite # ./sukoon-frontend for earlier version
+  #   # build:
+  #   #   context: ./frontend-vite
+  #   #   args:
+  #   #     SUPABASE_API_KEY: ${SUPABASE_API_KEY}
+  #   #     SUPABASE_AUTHORIZATION_TOKEN: ${SUPABASE_AUTHORIZATION_TOKEN}
+  #   #     BACKEND_ENDPOINT: ${BACKEND_ENDPOINT}
+  #   ports:
+  #     - "3002:80" # "3002:3000" for earlier version
+  #   restart: unless-stopped
 
 # version: '3.8'
 

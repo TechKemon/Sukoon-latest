@@ -199,3 +199,4 @@ requirements.lock
 .cursor/rules/django-python.mdc
 .cursor/rules/python-fastapi.mdc
 
+AWSCLIV2.pkg
