@@ -1,6 +1,7 @@
 .env
 .DS_Store
 .files
+voice
 
 utils/supabase_manager_fernet.py
 utils/supabase_manager_hashed.py
@@ -190,6 +191,11 @@ cython_debug/
 #.idea/
 docs/user_research/sukoon_persona.jpg
 temp.py
+
 requirements copy.txt
 requirements_debug.txt
 requirements.lock
+
+.cursor/rules/django-python.mdc
+.cursor/rules/python-fastapi.mdc
+
